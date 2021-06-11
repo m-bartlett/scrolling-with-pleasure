@@ -6,6 +6,8 @@
 #include <string.h>
 #include <unistd.h>
 
+// $ xinput test-xi2 --root
+
 void processEvents(Display *display, Window window, int xi_opcode, Atom *wm_delete_window) {
   while (True) {
     XEvent event;
@@ -30,6 +32,7 @@ void processEvents(Display *display, Window window, int xi_opcode, Atom *wm_dele
 
           double *value = states->values;
 
+          // xinput list --long|grep Label -B 1
           if (XIMaskIsSet(states->mask, 2)) { // Horizontal scroll
             printf("%s\t%.2f\t%.2f\t%d\n", "horz", *raw_value, *value, raw_event);
             raw_value++;
