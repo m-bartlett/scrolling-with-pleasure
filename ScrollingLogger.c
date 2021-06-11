@@ -1,6 +1,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/extensions/XInput2.h>
+#include <X11/extensions/XTest.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -21,6 +22,7 @@ void processEvents(Display *display, Window window, int xi_opcode, Atom *wm_dele
 
       switch (device_event->evtype) {
         case XI_RawMotion: {
+
           XIRawEvent *raw_event = (XIRawEvent *) device_event;
           double *raw_value = raw_event->raw_values;
 
@@ -28,17 +30,29 @@ void processEvents(Display *display, Window window, int xi_opcode, Atom *wm_dele
 
           double *value = states->values;
 
-          for (int i = 0; i < states->mask_len * 8; i++) {
-            if (XIMaskIsSet(states->mask, i)) {
-              printf("%d\t%.2f\t%.2f\n", i, *raw_value, *value);
-              raw_value++;
-              value++;
-            }
+          if (XIMaskIsSet(states->mask, 2)) { // Horizontal scroll
+            printf("%s\t%.2f\t%.2f\t%d\n", "horz", *raw_value, *value, raw_event);
+            raw_value++;
+            value++;
           }
+
+          else if (XIMaskIsSet(states->mask, 3)) { // vertical scroll
+            printf("%s\t%.2f\t%.2f\t%d\n", "vert", *raw_value, *value, raw_event);
+            raw_value++;
+            value++;
+          }
+
+          break;
+
           break;
         }
       }
     }
+
+    XTestFakeButtonEvent(display, 5, True, 0 );
+    XTestFakeButtonEvent(display, 5, False, 0 );
+
+    XFlush(display);
 
     XFreeEventData(display, cookie);
   }
@@ -60,11 +74,7 @@ void selectRawMotionEvents(Display *display) {
 
 int main() {
   Display *display = XOpenDisplay(0);
-
-  if (!display) {
-    fprintf(stderr, "Error opening display\n");
-    return -1;
-  }
+  if (!display) {fprintf(stderr, "Error opening display\n"); return -1; }
 
   int xi_opcode, xi_firstevent, xi_firsterror;
 
@@ -74,7 +84,6 @@ int main() {
   }
 
   int major = 2, minor = 2;
-
   int result = XIQueryVersion(display, &major, &minor);
 
   if (result == BadRequest) {
@@ -85,13 +94,12 @@ int main() {
     return -1;
   }
 
-  Window window = XCreateSimpleWindow(display, DefaultRootWindow(display),
-    0, 0, 640, 480, 0, 0, WhitePixel(display, 0));
+  // Window window = XCreateSimpleWindow(display, DefaultRootWindow(display),
+    // 0, 0, 640, 480, 0, 0, WhitePixel(display, 0));
+  int screen = XDefaultScreen(display);
+  Window window = RootWindow(display, screen);
 
-  if (!window) {
-    fprintf(stderr, "Error creating windows.\n");
-    return -1;
-  }
+  if (!window) {fprintf(stderr, "Error creating windows.\n"); return -1; }
 
   selectRawMotionEvents(display);
 
